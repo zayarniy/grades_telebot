@@ -8,17 +8,17 @@ bot = telebot.TeleBot("1993451876:AAGnKf1H7Nz2C22JqeAAJ6cxQEnzq26tDKo")
 # Словарь для хранения групп и их учеников с оценками
 groups = {}
 current_group = ''
-current_student = ''
+current_student = 'не выбран'
 filename='groups.json'
 
 # Обработчик команды /start
 @bot.message_handler(commands=['start'])
 def start(message):
     markup = types.ReplyKeyboardMarkup(row_width=2)
-    itembtn1 = types.KeyboardButton('Список групп')
-    itembtn2 = types.KeyboardButton('Добавить группу')
-    itembtn3 = types.KeyboardButton('Считать список')
-    itembtn4 = types.KeyboardButton('Сохранить список')
+    itembtn1 = types.InlineKeyboardButton('Список групп')
+    itembtn2 = types.InlineKeyboardButton('Добавить группу')
+    itembtn3 = types.InlineKeyboardButton('Считать список')
+    itembtn4 = types.InlineKeyboardButton('Сохранить список')
     markup.add(itembtn1, itembtn2, itembtn3, itembtn4)
     bot.send_message(message.chat.id, "Выберите действие:", reply_markup=markup)
 
@@ -82,10 +82,9 @@ def group_menu(message):
     markup = types.ReplyKeyboardMarkup(row_width=2)
     itembtn1 = types.KeyboardButton('Список учеников')
     itembtn2 = types.KeyboardButton('Добавить ученика')
-    itembtn3 = types.KeyboardButton('Удалить ученика')
     itembtn4 = types.KeyboardButton('Назад')
-    markup.add(itembtn1, itembtn2, itembtn3, itembtn4)
-    bot.send_message(message.chat.id, f"Группа '{current_group}':", reply_markup=markup)
+    markup.add(itembtn1, itembtn2, itembtn4)
+    bot.send_message(message.chat.id, f"Группа '{current_group}' ученик '{current_student}:", reply_markup=markup)
 
 # Обработчик команды "Список учеников"
 @bot.message_handler(func=lambda message: message.text == "Список учеников")
@@ -136,50 +135,51 @@ def add_student_handler(message, group_name):
 # Обработчик команды "Удалить ученика"
 @bot.message_handler(func=lambda message: message.text == "Удалить ученика")
 def remove_student(message):
-    #group_name = get_current_group(message)
-    group_name = current_group
+    markup = types.ReplyKeyboardMarkup(row_width=2)
+    itembtn1 = types.KeyboardButton('Удалить. OK?')
+    itembtn2 = types.KeyboardButton('Отмена удаления')
+    markup.add(itembtn1, itembtn2)
+    bot.send_message(message.chat.id, f"Выбран ученик '{current_student}' в группе '{current_group}'!", reply_markup=markup)
 
-    if group_name:
-        students = groups[group_name]
-        if students:
-            markup = types.ReplyKeyboardMarkup(row_width=2)
-            for student in students:
-                itembtn = types.KeyboardButton(student)
-                markup.add(itembtn)
-            itembtn = types.KeyboardButton('Back')
-            markup.add(itembtn)
-            bot.send_message(message.chat.id, "Выберите ученика для удаления:", reply_markup=markup)
-        else:
-            bot.send_message(message.chat.id, "В этой группе пока нет учеников.")
+
+# Обработчик команды "Удалить ученика"
+@bot.message_handler(func=lambda message: message.text == "Удалить. OK?")
+def remove_student(message):
+    global current_student
+    if (current_group in groups and current_student in groups[current_group]):
+        del groups[current_group][current_student]
+        bot.send_message(message.chat.id, f"Ученик '{current_student}' в группе '{current_group}' удален!")
+        current_student = ''
     else:
-        bot.send_message(message.chat.id, "Сначала выберите группу.")
+        bot.send_message(message.chat.id, f"Ученик '{current_student}' в группе '{current_group}' не найден!")
+    group_menu(message)
 
-# # Обработчик выбора ученика для удаления
-# @bot.message_handler(func=lambda message: message.text in get_students(message))
-# def remove_student_handler(message):
-#     #group_name = get_current_group(message)
-#     group_name = current_group
-#     student_name = message.text
-#     del groups[group_name][student_name]
-#     bot.send_message(message.chat.id, f"Ученик '{student_name}' успешно удален из группы '{group_name}'!")
-#     group_menu(message)
+# Обработчик команды "Отмена удаления"
+@bot.message_handler(func=lambda message: message.text == "Отмена удаления")
+def remove_student(message):
+    group_menu(message)
+
+
 
 # Обработчик выбора ученика для оценивания
 @bot.message_handler(func=lambda message: message.text in get_students(message))
 def grades_student_handler(message):
     #group_name = get_current_group(message)
     global current_student
+
     group_name = current_group
-    student_name = message.text
-    current_student=student_name
+    if (message.text in groups[current_group]):
+        #student_name = message.text
+        current_student=message.text
     #bot.send_message(message.chat.id, f"Выбран ученик '{student_name}' в группе '{group_name}'!")
     markup = types.ReplyKeyboardMarkup(row_width=2)
     itembtn1 = types.KeyboardButton('Добавить оценку')
     itembtn2 = types.KeyboardButton('Удалить оценку')
     itembtn3 = types.KeyboardButton('Просмотреть оценки')
-    itembtn4 = types.KeyboardButton('Назад')
-    markup.add(itembtn1, itembtn2, itembtn3, itembtn4)
-    bot.send_message(message.chat.id, f"Выбран ученик '{student_name}' в группе '{group_name}'!", reply_markup=markup)
+    itembtn4 = types.KeyboardButton('Удалить ученика')
+    itembtn5 = types.KeyboardButton('Назад')
+    markup.add(itembtn1, itembtn2, itembtn3, itembtn4,itembtn5)
+    bot.send_message(message.chat.id, f"Выбран ученик '{current_student}' в группе '{current_group}'!", reply_markup=markup)
     #group_menu(message)
 
 # Обработчик команды "Назад"
@@ -190,8 +190,12 @@ def back(message):
 # Обработчик команды "Просмотреть оценки"
 @bot.message_handler(func=lambda message: message.text == "Просмотреть оценки")
 def show_grades(message):
-    grades=groups[current_group[current_student]]
+    grades=' '.join(groups[current_group][current_student])
+    if (grades==''):
+        grades='нет оценок'
+    print(grades)
     bot.send_message(message.chat.id, grades)
+    grades_student_handler(message)
 
 # Обработчик команды "Назад" (группа учеников)
 @bot.message_handler(func=lambda message: message.text == "Back")
@@ -199,6 +203,25 @@ def back(message):
     #start(message)
     group_menu(message)
 
+# Обработчик команды "Добавить оценку"
+@bot.message_handler(func=lambda message: message.text == "Добавить оценку")
+def add_grade_menu(message):
+    #start(message)
+    markup = types.ReplyKeyboardMarkup(row_width=2)
+    itembtn1 = types.KeyboardButton('Оценка 5')
+    itembtn2 = types.KeyboardButton('Оценка 4')
+    itembtn3 = types.KeyboardButton('Оценка 3')
+    itembtn4 = types.KeyboardButton('Оценка 2')
+    itembtn5 = types.KeyboardButton('Отмена')
+    markup.add(itembtn1, itembtn2, itembtn3, itembtn4,itembtn5)
+    bot.send_message(message.chat.id, f"Выбран ученик '{current_student}' в группе '{current_group}'!", reply_markup=markup)
+
+@bot.message_handler(func=lambda message: message.text in ['Оценка 5', 'Оценка 4', 'Оценка 3', 'Оценка 2'])
+def add_grade(message):
+    grade=message.text.split(' ')[1]
+    groups[current_group][current_student].append(grade)
+    bot.send_message(message.chat.id, f"Ученик '{current_student}' в группе '{current_group}' оценка'{grade}")
+    grades_student_handler(message)
 
 # Функция для получения текущей группы
 def get_current_group(message):
@@ -207,13 +230,19 @@ def get_current_group(message):
             return group
     return None
 
-# Функция для получения списка учеников группы
+#Функция для получения списка учеников группы
 def get_students(message):
     #group_name = get_current_group(message)
     group_name = current_group
     if group_name:
         return list(groups[group_name].keys())
     return []
+
+
+
+
+
+
 
 # Запускаем бота
 bot.polling()
