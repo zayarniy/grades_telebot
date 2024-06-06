@@ -197,6 +197,7 @@ def show_grades(message):
     bot.send_message(message.chat.id, grades)
     grades_student_handler(message)
 
+
 # Обработчик команды "Назад" (группа учеников)
 @bot.message_handler(func=lambda message: message.text == "Back")
 def back(message):
@@ -215,6 +216,31 @@ def add_grade_menu(message):
     itembtn5 = types.KeyboardButton('Отмена')
     markup.add(itembtn1, itembtn2, itembtn3, itembtn4,itembtn5)
     bot.send_message(message.chat.id, f"Выбран ученик '{current_student}' в группе '{current_group}'!", reply_markup=markup)
+
+# Обработчик команды "Просмотреть оценки"
+@bot.message_handler(func=lambda message: message.text == "Удалить оценку")
+def delete_grade_menu(message):
+    if current_group in groups and current_student in groups[current_group]:
+        markup = types.InlineKeyboardMarkup(row_width=2)
+        i=0
+        for grade in groups[current_group][current_student]:
+            delete_grade=' '.join(['delete_grade;',str(i)])
+            itemBtn=types.InlineKeyboardButton(grade, callback_data=delete_grade)
+            markup.add(itemBtn)
+            i+=1
+        bot.send_message(message.chat.id,f"Выбран ученик '{current_student}' в группе '{current_group}'! Выберите оценку для удаления",reply_markup=markup)
+    else:
+        bot.send_message(message.chat.id, "Ученик не найден")
+
+#Удаление оценки у ученика
+@bot.callback_query_handler(func=lambda call: True) #call.data == 'delete_grade')
+def delete_grade(call):
+    print(call.data,call.message.text, '!')
+    i=int(call.data.split(';')[1])
+    del groups[current_group][current_student][i]
+    print('Оценка под номером',i,'удалена')
+    delete_grade_menu(message=call.message)
+
 
 @bot.message_handler(func=lambda message: message.text in ['Оценка 5', 'Оценка 4', 'Оценка 3', 'Оценка 2'])
 def add_grade(message):
